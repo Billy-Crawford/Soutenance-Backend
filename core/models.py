@@ -77,7 +77,7 @@ class Message(models.Model):
     expediteur = models.ForeignKey(settings.AUTH_USER_MODEL, related_name='messages_envoyes', on_delete=models.CASCADE)
     destinataire = models.ForeignKey(settings.AUTH_USER_MODEL, related_name='messages_recus', on_delete=models.CASCADE)
     texte = models.TextField(blank=True, null=True)
-    image = models.ImageField(upload_to='messages/', blank=True, null=True)
+    image = models.FileField(upload_to='messages/', blank=True, null=True)
     date_envoi = models.DateTimeField(auto_now_add=True)
 
     class Meta:

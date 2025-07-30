@@ -11,7 +11,7 @@ from utils.pdf_generator import generer_recu_paiement
 from . import models
 from .models import Property, Contract, Payment, Message, CustomUser
 from .serializers import PropertySerializer, ContractSerializer, PaymentSerializer, MessageSerializer, \
-    RegisterAdminSerializer, CreateLocataireSerializer
+    RegisterAdminSerializer, CreateLocataireSerializer, LocataireListSerializer, LocataireUpdateSerializer
 
 
 class PropertyViewSet(viewsets.ModelViewSet):
@@ -71,6 +71,7 @@ class PaymentViewSet(viewsets.ModelViewSet):
             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
+
 class MessageViewSet(viewsets.ModelViewSet):
     queryset = Message.objects.all()
     serializer_class = MessageSerializer
@@ -78,11 +79,33 @@ class MessageViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         user = self.request.user
-        # Messages où l'utilisateur est expéditeur ou destinataire
         return Message.objects.filter(Q(expediteur=user) | Q(destinataire=user))
 
     def perform_create(self, serializer):
         serializer.save(expediteur=self.request.user)
+
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        if instance.expediteur != request.user:
+            return Response({'detail': "Vous ne pouvez supprimer que vos propres messages."}, status=403)
+        return super().destroy(request, *args, **kwargs)
+
+    @action(detail=False, methods=['get'], url_path='conversation/(?P<user_id>[^/.]+)')
+    def conversation(self, request, user_id=None):
+        user = request.user
+        try:
+            destinataire = CustomUser.objects.get(id=user_id)
+        except CustomUser.DoesNotExist:
+            return Response({'detail': 'Utilisateur introuvable'}, status=404)
+
+        messages = Message.objects.filter(
+            Q(expediteur=user, destinataire=destinataire) |
+            Q(expediteur=destinataire, destinataire=user)
+        ).order_by('date_envoi')
+
+        serializer = self.get_serializer(messages, many=True)
+        return Response(serializer.data)
+
 
 
 class RegisterAdminView(generics.CreateAPIView):
@@ -99,15 +122,19 @@ class CreateLocataireView(generics.CreateAPIView):
     permission_classes = [IsAdminUserCustom]
 
 
-class LocataireViewSet(viewsets.ReadOnlyModelViewSet):
-    serializer_class = CreateLocataireSerializer
+class LocataireViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAdminUserCustom]
 
     def get_queryset(self):
         return CustomUser.objects.filter(role='locataire')
 
+    def get_serializer_class(self):
+        if self.action in ['update', 'partial_update', 'create']:
+            return LocataireUpdateSerializer
+        return LocataireListSerializer
+
+
 
 class IsLocataire(permissions.BasePermission):
     def has_permission(self, request, view):
         return request.user and request.user.is_authenticated and request.user.role == 'locataire'
-

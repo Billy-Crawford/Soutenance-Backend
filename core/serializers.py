@@ -93,3 +93,24 @@ class CreateLocataireSerializer(serializers.ModelSerializer):
         user.set_password(validated_data['password'])
         user.save()
         return user
+
+class LocataireListSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CustomUser
+        fields = ['id', 'username', 'first_name', 'last_name', 'email']
+
+class LocataireUpdateSerializer(serializers.ModelSerializer):
+    password = serializers.CharField(write_only=True, required=False)
+
+    class Meta:
+        model = CustomUser
+        fields = ['id', 'username', 'first_name', 'last_name', 'email', 'password']
+        read_only_fields = ['id']
+
+    def update(self, instance, validated_data):
+        password = validated_data.pop('password', None)
+        instance = super().update(instance, validated_data)
+        if password:
+            instance.set_password(password)
+            instance.save()
+        return instance

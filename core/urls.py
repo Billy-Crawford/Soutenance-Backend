@@ -13,7 +13,7 @@ router = DefaultRouter()
 router.register(r'logements', PropertyViewSet)
 router.register(r'contrats', ContractViewSet)
 router.register(r'paiements', PaymentViewSet)
-router.register(r'messages', MessageViewSet, basename='message')
+router.register(r'messages', MessageViewSet, basename='messages')  # ✅
 router.register('locataires', LocataireViewSet, basename='locataires')
 
 
