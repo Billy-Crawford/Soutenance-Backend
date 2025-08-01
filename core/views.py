@@ -11,13 +11,25 @@ from utils.pdf_generator import generer_recu_paiement
 from . import models
 from .models import Property, Contract, Payment, Message, CustomUser
 from .serializers import PropertySerializer, ContractSerializer, PaymentSerializer, MessageSerializer, \
-    RegisterAdminSerializer, CreateLocataireSerializer, LocataireListSerializer, LocataireUpdateSerializer
+    RegisterAdminSerializer, CreateLocataireSerializer, LocataireListSerializer, LocataireUpdateSerializer, \
+    PropertyCreateSerializer
 
 
 class PropertyViewSet(viewsets.ModelViewSet):
     queryset = Property.objects.all()
-    serializer_class = PropertySerializer
     permission_classes = [IsAuthenticated]
+
+    def get_serializer_class(self):
+        if self.action == 'create':
+            return PropertyCreateSerializer
+        return PropertySerializer
+
+    def get_queryset(self):
+        user = self.request.user
+        if user.role == "admin":
+            return Property.objects.filter(proprietaire=user)
+        return Property.objects.none()
+
 
 class ContractViewSet(viewsets.ModelViewSet):
     queryset = Contract.objects.all()
@@ -27,7 +39,7 @@ class ContractViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         user = self.request.user
         if user.role == 'admin':
-            return Contract.objects.all()
+            return Contract.objects.filter(logement__proprietaire=user)
         return Contract.objects.filter(locataire=user)
 
 class PaymentViewSet(viewsets.ModelViewSet):
@@ -38,8 +50,14 @@ class PaymentViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         user = self.request.user
         if user.role == 'admin':
-            return Payment.objects.all()
+            return Contract.objects.filter(logement__proprietaire=user)
         return Payment.objects.filter(locataire=user)
+
+    @action(detail=False, methods=['get'])
+    def mes_paiements(self, request):
+        paiements = Payment.objects.filter(locataire=request.user)
+        serializer = self.get_serializer(paiements, many=True, context={'request': request})
+        return Response(serializer.data)
 
     @action(detail=True, methods=['post'])
     def valider(self, request, pk=None):
@@ -126,13 +144,13 @@ class LocataireViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAdminUserCustom]
 
     def get_queryset(self):
-        return CustomUser.objects.filter(role='locataire')
+        user = self.request.user
+        return CustomUser.objects.filter(role='locataire', proprietaire=user)
 
     def get_serializer_class(self):
         if self.action in ['update', 'partial_update', 'create']:
             return LocataireUpdateSerializer
         return LocataireListSerializer
-
 
 
 class IsLocataire(permissions.BasePermission):

@@ -10,10 +10,21 @@ class CustomUser(AbstractUser):
         ('admin', 'Admin'),
         ('locataire', 'Locataire'),
     )
-    role = models.CharField(max_length=10, choices=ROLE_CHOICES,default='locataire')
+    role = models.CharField(max_length=10, choices=ROLE_CHOICES, default='locataire')
+
+    # 🔥 Relation propriétaire → locataire
+    proprietaire = models.ForeignKey(
+        'self',  # vers un autre utilisateur
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        limit_choices_to={'role': 'admin'},
+        related_name='locataires'
+    )
 
     def __str__(self):
-        return f"{self.username} ({self.role}"
+        return f"{self.username} ({self.role})"
+
 
 LOGEMENT_TYPES = [
     ('chambre', 'Chambre simple'),
@@ -33,11 +44,20 @@ class Property(models.Model):
     loyer_mensuel = models.DecimalField(max_digits=10, decimal_places=2)
     caution = models.DecimalField(max_digits=10, decimal_places=2)
     minimum_mois = models.PositiveIntegerField()
-    images = models.JSONField(default=list, blank=True)
     date_ajout = models.DateTimeField(auto_now_add=True)
+    proprietaire = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        limit_choices_to={'role': 'admin'}
+    )
 
     def __str__(self):
         return f"{self.nom} - {self.type_logement}"
+
+
+class ImageLogement(models.Model):
+    logement = models.ForeignKey(Property, related_name="images", on_delete=models.CASCADE)
+    image = models.ImageField(upload_to="logements/")
 
 
 class Contract(models.Model):
