@@ -28,7 +28,8 @@ class PropertyViewSet(viewsets.ModelViewSet):
         user = self.request.user
         if user.role == "admin":
             return Property.objects.filter(proprietaire=user)
-        return Property.objects.none()
+        # Pour les locataires : retourne les logements liés à leurs contrats
+        return Property.objects.filter(contract__locataire=user).distinct()
 
 
 class ContractViewSet(viewsets.ModelViewSet):

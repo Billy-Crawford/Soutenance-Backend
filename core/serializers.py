@@ -33,31 +33,55 @@ class PropertyCreateSerializer(serializers.ModelSerializer):
         return property_instance
 
 
+# class PropertySerializer(serializers.ModelSerializer):
+#     images = ImageLogementSerializer(many=True, read_only=True)
+#     est_loue = serializers.SerializerMethodField()
+#
+#     class Meta:
+#         model = Property
+#         fields = '__all__'
+#         read_only_fields = ['proprietaire']
+#
+#     def get_est_loue(self, obj):
+#         return obj.contract_set.exists()  # True si le logement a un contrat
+
+
 class PropertySerializer(serializers.ModelSerializer):
     images = ImageLogementSerializer(many=True, read_only=True)
+    est_loue = serializers.SerializerMethodField()
+    contrat_pdf_url = serializers.SerializerMethodField()  # Nouveau champ
 
     class Meta:
         model = Property
         fields = '__all__'
         read_only_fields = ['proprietaire']
 
+    def get_est_loue(self, obj):
+        return obj.contract_set.exists()
+
+    def get_contrat_pdf_url(self, obj):
+        contract = obj.contract_set.first()  # Prend le premier contrat trouvé
+        if contract and contract.fichier_pdf:
+            return self.context['request'].build_absolute_uri(contract.fichier_pdf.url)
+        return None
+
+
 class ContractSerializer(serializers.ModelSerializer):
-    # Affichage des noms pour lecture
     locataire_display = serializers.SerializerMethodField(read_only=True)
-    logement_display = serializers.SerializerMethodField(read_only=True)
+    logement_detail = PropertySerializer(source='logement', read_only=True)  # 🔥 Nouveau champ détaillé
 
     class Meta:
         model = Contract
         fields = [
             'id',
-            'locataire',      # champ écrit par ID
-            'logement',       # champ écrit par ID
+            'locataire',
+            'logement',
             'fichier_pdf',
             'date_debut',
             'date_fin',
             'date_creation',
-            'locataire_display',  # pour lecture uniquement
-            'logement_display',
+            'locataire_display',
+            'logement_detail',  # ✅ à la place de logement_display
         ]
         extra_kwargs = {
             'locataire': {'required': True},
@@ -74,8 +98,6 @@ class ContractSerializer(serializers.ModelSerializer):
     def get_locataire_display(self, obj):
         return f"{obj.locataire.first_name} {obj.locataire.last_name}".strip() or obj.locataire.username
 
-    def get_logement_display(self, obj):
-        return obj.logement.nom
 
 
 

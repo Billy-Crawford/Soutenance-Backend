@@ -26,7 +26,17 @@ SECRET_KEY = 'django-insecure-@r=mz4459b@#oeed+77opd6b7^*um+o@p^#0v13#=wsl=-iqe)
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['*']
+
+# Si vous utilisez Flutter Web en développement :
+CORS_ALLOW_ALL_ORIGINS = True  # Temporaire pour les tests
+
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost",
+    "http://localhost:8000",
+    "http://192.168.1.72:8000",
+    "http://<192.168.1.66>",
+]
 
 AUTH_USER_MODEL = 'core.CustomUser'
 
@@ -70,6 +80,8 @@ SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(minutes=30),
     'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
     'AUTH_HEADER_TYPES': ('Bearer',),
+    'USER_ID_FIELD': 'username',  # Utilisez 'username' au lieu de 'id' si nécessaire
+    'ROLE_CLAIM': 'role',        # Ajoutez le rôle dans le token
 }
 ROOT_URLCONF = 'config.urls'
 
