@@ -51,12 +51,23 @@ class PaymentViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         user = self.request.user
         if user.role == 'admin':
-            return Contract.objects.filter(logement__proprietaire=user)
+            return Payment.objects.filter(logement__proprietaire=user)
         return Payment.objects.filter(locataire=user)
+
+    def perform_create(self, serializer):
+        # Injecte automatiquement le locataire connecté lors de la création
+        serializer.save(locataire=self.request.user)
+
+    # @action(detail=False, methods=['get'])
+    # def mes_paiements(self, request):
+    #     paiements = Payment.objects.filter(locataire=request.user)
+    #     serializer = self.get_serializer(paiements, many=True, context={'request': request})
+    #     return Response(serializer.data)
 
     @action(detail=False, methods=['get'])
     def mes_paiements(self, request):
-        paiements = Payment.objects.filter(locataire=request.user)
+        user = request.user
+        paiements = Payment.objects.filter(locataire=user).order_by('-date_paiement')
         serializer = self.get_serializer(paiements, many=True, context={'request': request})
         return Response(serializer.data)
 
@@ -81,7 +92,7 @@ class PaymentViewSet(viewsets.ModelViewSet):
             envoyer_recu_par_mail(paiement, chemin_absolu)
 
             return Response({
-                'message': 'Paiement validé, reçu généré et envoyé par mail.',
+                'message': 'Paiement validé, reçu généré avec succes',
                 'recu': paiement.fichier_recu.url if paiement.fichier_recu else chemin_relatif
             }, status=status.HTTP_200_OK)
 
@@ -157,3 +168,4 @@ class LocataireViewSet(viewsets.ModelViewSet):
 class IsLocataire(permissions.BasePermission):
     def has_permission(self, request, view):
         return request.user and request.user.is_authenticated and request.user.role == 'locataire'
+

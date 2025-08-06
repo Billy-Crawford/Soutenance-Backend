@@ -80,11 +80,19 @@ PAYMENT_TYPES = [
     ('reparation', 'Réparation'),
 ]
 
+MODE_PAIEMENT = [
+    ('Mobile Money', 'Mobile Money'),
+    ('Espèce', 'Espèce'),
+    ('Virement', 'Virement'),
+]
+
+
 class Payment(models.Model):
     locataire = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, limit_choices_to={'role': 'locataire'})
     logement = models.ForeignKey(Property, on_delete=models.CASCADE)
     montant = models.DecimalField(max_digits=10, decimal_places=2)
     type_paiement = models.CharField(max_length=20, choices=PAYMENT_TYPES)
+    mode_paiement = models.CharField(max_length=20, choices=MODE_PAIEMENT, default='Mobile Money')
     mois_concerne = models.CharField(max_length=20, help_text="Ex: Juin 2025")
     est_valide = models.BooleanField(default=False)
     date_paiement = models.DateTimeField(default=timezone.now)
@@ -105,3 +113,4 @@ class Message(models.Model):
 
     def __str__(self):
         return f"Message de {self.expediteur} à {self.destinataire} - {self.date_envoi.strftime('%Y-%m-%d %H:%M')}"
+

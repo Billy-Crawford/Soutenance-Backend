@@ -33,19 +33,6 @@ class PropertyCreateSerializer(serializers.ModelSerializer):
         return property_instance
 
 
-# class PropertySerializer(serializers.ModelSerializer):
-#     images = ImageLogementSerializer(many=True, read_only=True)
-#     est_loue = serializers.SerializerMethodField()
-#
-#     class Meta:
-#         model = Property
-#         fields = '__all__'
-#         read_only_fields = ['proprietaire']
-#
-#     def get_est_loue(self, obj):
-#         return obj.contract_set.exists()  # True si le logement a un contrat
-
-
 class PropertySerializer(serializers.ModelSerializer):
     images = ImageLogementSerializer(many=True, read_only=True)
     est_loue = serializers.SerializerMethodField()
@@ -99,8 +86,6 @@ class ContractSerializer(serializers.ModelSerializer):
         return f"{obj.locataire.first_name} {obj.locataire.last_name}".strip() or obj.locataire.username
 
 
-
-
 class PaymentSerializer(serializers.ModelSerializer):
     fichier_recu_url = serializers.SerializerMethodField()
     locataire_nom = serializers.SerializerMethodField()
@@ -110,8 +95,10 @@ class PaymentSerializer(serializers.ModelSerializer):
     class Meta:
         model = Payment
         fields = [
-            'id', 'locataire_nom', 'proprietaire_nom', 'logement_nom',
-            'montant', 'type_paiement', 'mois_concerne', 'est_valide',
+            'id', 'logement',
+            'locataire_nom', 'proprietaire_nom', 'logement_nom',
+            'montant', 'type_paiement', 'mode_paiement',
+            'mois_concerne', 'est_valide',
             'date_paiement', 'fichier_recu_url', 'fichier_recu'
         ]
 
@@ -126,6 +113,15 @@ class PaymentSerializer(serializers.ModelSerializer):
 
     def get_proprietaire_nom(self, obj):
         return obj.logement.proprietaire.get_full_name() or obj.logement.proprietaire.username
+
+    def create(self, validated_data):
+        request = self.context.get('request')
+        user = request.user
+        validated_data['locataire'] = user
+        return super().create(validated_data)
+
+    # def create(self, validated_data):
+    #     return Payment.objects.create(**validated_data)
 
 
 class MessageSerializer(serializers.ModelSerializer):
