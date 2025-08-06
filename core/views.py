@@ -12,7 +12,44 @@ from . import models
 from .models import Property, Contract, Payment, Message, CustomUser
 from .serializers import PropertySerializer, ContractSerializer, PaymentSerializer, MessageSerializer, \
     RegisterAdminSerializer, CreateLocataireSerializer, LocataireListSerializer, LocataireUpdateSerializer, \
-    PropertyCreateSerializer
+    PropertyCreateSerializer, ProfileSerializer, PasswordChangeSerializer
+
+
+from rest_framework import viewsets
+from rest_framework.decorators import action
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from .serializers import ProfileSerializer, PasswordChangeSerializer
+
+
+
+class MeViewSet(viewsets.ViewSet):
+    permission_classes = [IsAuthenticated]
+
+    @action(detail=False, methods=['get'], url_path='me')
+    def me(self, request):
+        serializer = ProfileSerializer(request.user, context={'request': request})
+        return Response(serializer.data)
+
+    def retrieve(self, request, pk=None):
+        serializer = ProfileSerializer(request.user, context={'request': request})
+        return Response(serializer.data)
+
+    def update(self, request, pk=None):
+        serializer = ProfileSerializer(request.user, data=request.data, partial=True, context={'request': request})
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=400)
+
+    @action(detail=False, methods=['post'])
+    def change_password(self, request):
+        serializer = PasswordChangeSerializer(data=request.data)
+        if serializer.is_valid():
+            request.user.set_password(serializer.validated_data['password'])
+            request.user.save()
+            return Response({"detail": "Mot de passe mis à jour avec succès."})
+        return Response(serializer.errors, status=400)
 
 
 class PropertyViewSet(viewsets.ModelViewSet):

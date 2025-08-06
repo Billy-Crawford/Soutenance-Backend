@@ -11,6 +11,7 @@ class CustomUser(AbstractUser):
         ('locataire', 'Locataire'),
     )
     role = models.CharField(max_length=10, choices=ROLE_CHOICES, default='locataire')
+    photo = models.ImageField(upload_to='users/photos/', null=True, blank=True)
 
     # 🔥 Relation propriétaire → locataire
     proprietaire = models.ForeignKey(

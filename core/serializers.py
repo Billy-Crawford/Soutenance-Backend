@@ -4,6 +4,21 @@ from rest_framework.templatetags.rest_framework import data
 from .models import Property, Contract, Payment, Message, CustomUser, ImageLogement
 from utils.pdf_generator import generer_recu_paiement
 
+class ProfileSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CustomUser
+        fields = ['id', 'username', 'email', 'first_name', 'last_name', 'photo']
+        read_only_fields = ['username', 'email']
+
+class PasswordChangeSerializer(serializers.Serializer):
+    password = serializers.CharField(write_only=True, required=True, validators=[validate_password])
+    confirm_password = serializers.CharField(write_only=True, required=True)
+
+    def validate(self, data):
+        if data['password'] != data['confirm_password']:
+            raise serializers.ValidationError("Les mots de passe ne correspondent pas.")
+        return data
+
 
 class ImageLogementSerializer(serializers.ModelSerializer):
     class Meta:

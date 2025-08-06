@@ -3,13 +3,14 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from .views import PropertyViewSet, ContractViewSet, PaymentViewSet, MessageViewSet, RegisterAdminView, \
-    CreateLocataireView, LocataireViewSet
+    CreateLocataireView, LocataireViewSet, MeViewSet
 from rest_framework_simplejwt.views import (
     TokenObtainPairView,
     TokenRefreshView,
 )
 
 router = DefaultRouter()
+router.register(r'profil', MeViewSet, basename='profil')
 router.register(r'logements', PropertyViewSet)
 router.register(r'contrats', ContractViewSet)
 router.register(r'paiements', PaymentViewSet)
