@@ -28,4 +28,5 @@ urlpatterns = [
     path('create-locataire/', CreateLocataireView.as_view(), name='create-locataire'),
     path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),  # login
     path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
+    path('me/', MeViewSet.as_view({'get': 'me'}), name='me'),
 ]
