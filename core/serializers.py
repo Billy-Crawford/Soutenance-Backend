@@ -156,7 +156,6 @@ class PaymentSerializer(serializers.ModelSerializer):
 #             raise serializers.ValidationError("Un message doit contenir du texte ou une image.")
 #         return data
 
-# core/serializers.py
 
 class MessageSerializer(serializers.ModelSerializer):
     expediteur = serializers.SerializerMethodField()

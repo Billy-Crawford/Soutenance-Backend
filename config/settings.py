@@ -104,6 +104,9 @@ STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
+# Utiliser le stockage local au lieu de S3 (solution alternative)
+DEFAULT_FILE_STORAGE = 'django.core.files.storage.FileSystemStorage'
+
 # =====================
 # CORS
 # =====================
@@ -112,33 +115,17 @@ CORS_ALLOW_ALL_ORIGINS = True
 # =====================
 # REST FRAMEWORK
 # =====================
-# REST_FRAMEWORK = {
-#     'DEFAULT_AUTHENTICATION_CLASSES': [
-#         'rest_framework.authentication.SessionAuthentication',
-#         'rest_framework.authentication.BasicAuthentication',
-#         'rest_framework.authentication.TokenAuthentication',
-#     ],
-#     'DEFAULT_PERMISSION_CLASSES': [
-#         'rest_framework.permissions.AllowAny',
-#     ],
-# }
-
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
-        'rest_framework_simplejwt.authentication.JWTAuthentication',  # ✅ ajout
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
     ],
     'DEFAULT_PERMISSION_CLASSES': [
-        'rest_framework.permissions.IsAuthenticated',  # ✅ sécurise par défaut
+        'rest_framework.permissions.IsAuthenticated',
     ],
 }
-
 
 # =====================
 # AUTRES
 # =====================
-# Sécurité Render (optionnel)
+# Sécurité Render
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
-
-DEFAULT_FILE_STORAGE = "storages.backends.s3boto3.S3Boto3Storage"
-
-WHITENOISE_ROOT = BASE_DIR / "media"
