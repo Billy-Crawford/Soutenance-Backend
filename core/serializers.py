@@ -1,3 +1,5 @@
+#core/serializers.py
+
 from django.contrib.auth.password_validation import validate_password
 from rest_framework import serializers
 from rest_framework.templatetags.rest_framework import data
@@ -138,20 +140,52 @@ class PaymentSerializer(serializers.ModelSerializer):
     # def create(self, validated_data):
     #     return Payment.objects.create(**validated_data)
 
+# ======================== MESSAGE =============================
+
+# class MessageSerializer(serializers.ModelSerializer):
+#     expediteur = serializers.StringRelatedField(read_only=True)  # Affiche username ou __str__
+#     destinataire = serializers.PrimaryKeyRelatedField(queryset=CustomUser.objects.all())
+#
+#     class Meta:
+#         model = Message
+#         fields = ['id', 'expediteur', 'destinataire', 'texte', 'image', 'date_envoi']
+#         read_only_fields = ['id', 'expediteur', 'date_envoi']
+#
+#     def validate(self, data):
+#         if not data.get('texte') and not data.get('image'):
+#             raise serializers.ValidationError("Un message doit contenir du texte ou une image.")
+#         return data
+
+# core/serializers.py
 
 class MessageSerializer(serializers.ModelSerializer):
-    expediteur = serializers.StringRelatedField(read_only=True)  # Affiche username ou __str__
-    destinataire = serializers.PrimaryKeyRelatedField(queryset=CustomUser.objects.all())
+    expediteur = serializers.SerializerMethodField()
+    destinataire = serializers.SerializerMethodField()
 
     class Meta:
         model = Message
         fields = ['id', 'expediteur', 'destinataire', 'texte', 'image', 'date_envoi']
         read_only_fields = ['id', 'expediteur', 'date_envoi']
 
+    def get_expediteur(self, obj):
+        return {
+            "id": obj.expediteur.id,
+            "username": obj.expediteur.username,
+            "full_name": obj.expediteur.get_full_name() or obj.expediteur.username,
+        }
+
+    def get_destinataire(self, obj):
+        return {
+            "id": obj.destinataire.id,
+            "username": obj.destinataire.username,
+            "full_name": obj.destinataire.get_full_name() or obj.destinataire.username,
+        }
+
     def validate(self, data):
         if not data.get('texte') and not data.get('image'):
             raise serializers.ValidationError("Un message doit contenir du texte ou une image.")
         return data
+
 
 
 class RegisterAdminSerializer(serializers.ModelSerializer):
