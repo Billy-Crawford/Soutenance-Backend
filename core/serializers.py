@@ -158,12 +158,27 @@ class PaymentSerializer(serializers.ModelSerializer):
 
 
 class MessageSerializer(serializers.ModelSerializer):
-    expediteur = serializers.SerializerMethodField()
-    destinataire = serializers.SerializerMethodField()
+    expediteur = serializers.SerializerMethodField(read_only=True)
+    destinataire = serializers.SerializerMethodField(read_only=True)
+
+    # 🔥 Champ en écriture uniquement
+    destinataire_id = serializers.PrimaryKeyRelatedField(
+        queryset=CustomUser.objects.all(),
+        write_only=True,
+        source="destinataire"
+    )
 
     class Meta:
         model = Message
-        fields = ['id', 'expediteur', 'destinataire', 'texte', 'image', 'date_envoi']
+        fields = [
+            'id',
+            'expediteur',
+            'destinataire',
+            'destinataire_id',  # ⚡ nouveau champ pour POST
+            'texte',
+            'image',
+            'date_envoi'
+        ]
         read_only_fields = ['id', 'expediteur', 'date_envoi']
 
     def get_expediteur(self, obj):
@@ -184,6 +199,7 @@ class MessageSerializer(serializers.ModelSerializer):
         if not data.get('texte') and not data.get('image'):
             raise serializers.ValidationError("Un message doit contenir du texte ou une image.")
         return data
+
 
 
 
