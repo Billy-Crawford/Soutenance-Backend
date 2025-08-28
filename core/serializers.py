@@ -142,21 +142,6 @@ class PaymentSerializer(serializers.ModelSerializer):
 
 # ======================== MESSAGE =============================
 
-# class MessageSerializer(serializers.ModelSerializer):
-#     expediteur = serializers.StringRelatedField(read_only=True)  # Affiche username ou __str__
-#     destinataire = serializers.PrimaryKeyRelatedField(queryset=CustomUser.objects.all())
-#
-#     class Meta:
-#         model = Message
-#         fields = ['id', 'expediteur', 'destinataire', 'texte', 'image', 'date_envoi']
-#         read_only_fields = ['id', 'expediteur', 'date_envoi']
-#
-#     def validate(self, data):
-#         if not data.get('texte') and not data.get('image'):
-#             raise serializers.ValidationError("Un message doit contenir du texte ou une image.")
-#         return data
-
-
 class MessageSerializer(serializers.ModelSerializer):
     expediteur = serializers.SerializerMethodField(read_only=True)
     destinataire = serializers.SerializerMethodField(read_only=True)
