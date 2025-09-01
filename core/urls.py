@@ -16,6 +16,7 @@ router.register(r'contrats', ContractViewSet)
 router.register(r'paiements', PaymentViewSet)
 router.register(r'messages', MessageViewSet, basename='messages')  # ✅
 router.register('locataires', LocataireViewSet, basename='locataires')
+router.register(r'me_flutter', MeFlutterViewSet, basename='me_flutter')
 
 
 urlpatterns = [

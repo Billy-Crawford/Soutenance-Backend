@@ -2,8 +2,10 @@
 
 import os
 from django.db.models import Q
+from django.http.multipartparser import MultiPartParser
 from rest_framework import viewsets, status, permissions, generics
 from rest_framework.decorators import action
+from rest_framework.parsers import FormParser
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
 
@@ -52,6 +54,33 @@ class MeViewSet(viewsets.ViewSet):
             request.user.save()
             return Response({"detail": "Mot de passe mis à jour avec succès."})
         return Response(serializer.errors, status=400)
+
+
+class MeFlutterViewSet(viewsets.GenericViewSet):
+    """
+       Vue spécifique pour Flutter :
+       - GET  -> Récupérer le profil
+       - PATCH -> Mettre à jour le profil (y compris photo)
+       """
+    serializer_class = ProfileSerializer
+    permission_classes = [IsAuthenticated]
+    parser_classes = [MultiPartParser, FormParser]
+
+    def get_object(self):
+        # On retourne toujours l'utilisateur connexte
+        return self.request.user
+
+    def retrieve(self, request, *args, **kwargs):
+        serializer = self.get_serializer(self.get_object())
+        return Response(serializer.data)
+
+    def partial_update(self, request, *args, **kwargs):
+        user = self.get_object()
+        serializer = self.get_serializer(user, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 class PropertyViewSet(viewsets.ModelViewSet):
