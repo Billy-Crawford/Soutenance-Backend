@@ -66,21 +66,23 @@ class MeFlutterViewSet(viewsets.GenericViewSet):
     permission_classes = [IsAuthenticated]
     parser_classes = [MultiPartParser, FormParser]
 
-    def get_object(self):
-        # On retourne toujours l'utilisateur connexte
-        return self.request.user
-
-    def retrieve(self, request, *args, **kwargs):
-        serializer = self.get_serializer(self.get_object())
+    @action(detail=False, methods=['get'])
+    def me(self, request):
+        serializer = self.get_serializer(request.user)
         return Response(serializer.data)
 
-    def partial_update(self, request, *args, **kwargs):
-        user = self.get_object()
-        serializer = self.get_serializer(user, data=request.data, partial=True)
+    @action(detail=False, methods=['patch'])
+    def update_me(self, request):
+        serializer = self.get_serializer(request.user, data=request.data, partial=True)
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def get_object(self):
+        # On retourne toujours l'utilisateur connexte
+        return self.request.user
+
 
 
 class PropertyViewSet(viewsets.ModelViewSet):
