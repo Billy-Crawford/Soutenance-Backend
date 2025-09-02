@@ -5,11 +5,23 @@ from pathlib import Path
 import dj_database_url
 from dotenv import load_dotenv
 
-# Charger les variables d'environnement depuis .env
-load_dotenv()
 
-# Répertoires de base
+# =====================
+# BASE DIR & ENV
+# =====================
 BASE_DIR = Path(__file__).resolve().parent.parent
+load_dotenv(BASE_DIR / '.env')  # Charge .env en local
+
+# =====================
+# VARIABLES CLOUDINARY
+# =====================
+CLOUDINARY_STORAGE = {
+    'CLOUD_NAME': os.getenv('dlkco4qiq'),
+    'API_KEY': os.getenv('649563713473243'),
+    'API_SECRET': os.getenv('NtWUpZCNP7wJuV1W9aCSvPpaR5s'),
+}
+
+DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
 
 # =====================
 # CONFIGURATION GÉNÉRALE
@@ -33,9 +45,14 @@ INSTALLED_APPS = [
     # Third-party
     'rest_framework',
     'corsheaders',
+    'cloudinary',
+    'cloudinary_storage',
 
     # App perso
     'core',
+
+    'django_extensions',
+
 ]
 
 # =====================
@@ -101,11 +118,9 @@ STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
+# MEDIA_URL et MEDIA_ROOT restent utiles si tu veux stocker des PDF localement
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
-
-# Utiliser le stockage local au lieu de S3 (solution alternative)
-DEFAULT_FILE_STORAGE = 'django.core.files.storage.FileSystemStorage'
 
 # =====================
 # CORS
@@ -127,5 +142,4 @@ REST_FRAMEWORK = {
 # =====================
 # AUTRES
 # =====================
-# Sécurité Render
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')

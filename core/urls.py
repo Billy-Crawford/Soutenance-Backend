@@ -19,6 +19,7 @@ router.register('locataires', LocataireViewSet, basename='locataires')
 router.register(r'me_flutter', MeFlutterViewSet, basename='me_flutter')
 
 
+
 urlpatterns = [
     path('', include(router.urls)),
 
