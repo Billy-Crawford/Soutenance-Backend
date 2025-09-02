@@ -1,0 +1,17 @@
+# Fichiers sensibles
+.env
+
+# Dossiers de cache
+__pycache__/
+*.pyc
+
+# Fichiers de migrations compilés
+*.sqlite3
+
+# Fichiers d’environnement virtuel
+venv/
+env/
+
+# Fichiers générés par l’IDE
+.idea/
+.vscode/
