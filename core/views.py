@@ -1,6 +1,8 @@
 #core/views.py
 
 import os
+
+from django.core.files.base import ContentFile
 from django.db.models import Q
 from django.http.multipartparser import MultiPartParser
 from rest_framework import viewsets, status, permissions, generics
@@ -113,6 +115,64 @@ class ContractViewSet(viewsets.ModelViewSet):
             return Contract.objects.filter(logement__proprietaire=user)
         return Contract.objects.filter(locataire=user)
 
+# class PaymentViewSet(viewsets.ModelViewSet):
+#     queryset = Payment.objects.all()
+#     serializer_class = PaymentSerializer
+#     permission_classes = [IsAuthenticated]
+#
+#     def get_queryset(self):
+#         user = self.request.user
+#         if user.role == 'admin':
+#             return Payment.objects.filter(logement__proprietaire=user)
+#         return Payment.objects.filter(locataire=user)
+#
+#     def perform_create(self, serializer):
+#         # Injecte automatiquement le locataire connecté lors de la création
+#         serializer.save(locataire=self.request.user)
+#
+#     # @action(detail=False, methods=['get'])
+#     # def mes_paiements(self, request):
+#     #     paiements = Payment.objects.filter(locataire=request.user)
+#     #     serializer = self.get_serializer(paiements, many=True, context={'request': request})
+#     #     return Response(serializer.data)
+#
+#     @action(detail=False, methods=['get'])
+#     def mes_paiements(self, request):
+#         user = request.user
+#         paiements = Payment.objects.filter(locataire=user).order_by('-date_paiement')
+#         serializer = self.get_serializer(paiements, many=True, context={'request': request})
+#         return Response(serializer.data)
+#
+#     @action(detail=True, methods=['post'])
+#     def valider(self, request, pk=None):
+#         paiement = self.get_object()
+#
+#         if paiement.est_valide:
+#             return Response({'message': 'Paiement déjà validé'}, status=status.HTTP_400_BAD_REQUEST)
+#
+#         try:
+#             paiement.est_valide = True
+#
+#             chemin_relatif = generer_recu_paiement(paiement, request.user.get_full_name())
+#             paiement.fichier_recu = chemin_relatif
+#             paiement.save()
+#
+#             # Chemin absolu du PDF pour l’envoi mail
+#             chemin_absolu = os.path.join(settings.MEDIA_ROOT, chemin_relatif)
+#
+#             # Envoi mail
+#             envoyer_recu_par_mail(paiement, chemin_absolu)
+#
+#             return Response({
+#                 'message': 'Paiement validé, reçu généré avec succes',
+#                 'recu': paiement.fichier_recu.url if paiement.fichier_recu else chemin_relatif
+#             }, status=status.HTTP_200_OK)
+#
+#         except Exception as e:
+#             print("Erreur génération reçu ou envoi mail :", e)
+#             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
 class PaymentViewSet(viewsets.ModelViewSet):
     queryset = Payment.objects.all()
     serializer_class = PaymentSerializer
@@ -120,7 +180,7 @@ class PaymentViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         user = self.request.user
-        if user.role == 'admin':
+        if user.role == "admin":
             return Payment.objects.filter(logement__proprietaire=user)
         return Payment.objects.filter(locataire=user)
 
@@ -128,48 +188,54 @@ class PaymentViewSet(viewsets.ModelViewSet):
         # Injecte automatiquement le locataire connecté lors de la création
         serializer.save(locataire=self.request.user)
 
-    # @action(detail=False, methods=['get'])
-    # def mes_paiements(self, request):
-    #     paiements = Payment.objects.filter(locataire=request.user)
-    #     serializer = self.get_serializer(paiements, many=True, context={'request': request})
-    #     return Response(serializer.data)
-
-    @action(detail=False, methods=['get'])
+    @action(detail=False, methods=["get"])
     def mes_paiements(self, request):
         user = request.user
-        paiements = Payment.objects.filter(locataire=user).order_by('-date_paiement')
-        serializer = self.get_serializer(paiements, many=True, context={'request': request})
+        paiements = Payment.objects.filter(locataire=user).order_by("-date_paiement")
+        serializer = self.get_serializer(
+            paiements, many=True, context={"request": request}
+        )
         return Response(serializer.data)
 
-    @action(detail=True, methods=['post'])
+    @action(detail=True, methods=["post"])
     def valider(self, request, pk=None):
         paiement = self.get_object()
 
         if paiement.est_valide:
-            return Response({'message': 'Paiement déjà validé'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"message": "Paiement déjà validé"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         try:
             paiement.est_valide = True
 
-            chemin_relatif = generer_recu_paiement(paiement, request.user.get_full_name())
-            paiement.fichier_recu = chemin_relatif
+            # Génère le reçu PDF en mémoire (retourne bytes)
+            pdf_bytes = generer_recu_paiement(paiement, request.user.get_full_name())
+
+            # Sauvegarde direct sur Cloudinary via FileField
+            paiement.fichier_recu.save(
+                f"recu_paiement_{paiement.id}.pdf", ContentFile(pdf_bytes)
+            )
             paiement.save()
 
-            # Chemin absolu du PDF pour l’envoi mail
-            chemin_absolu = os.path.join(settings.MEDIA_ROOT, chemin_relatif)
+            # Envoi mail avec le fichier stocké
+            if paiement.fichier_recu:
+                envoyer_recu_par_mail(paiement, paiement.fichier_recu.path)
 
-            # Envoi mail
-            envoyer_recu_par_mail(paiement, chemin_absolu)
-
-            return Response({
-                'message': 'Paiement validé, reçu généré avec succes',
-                'recu': paiement.fichier_recu.url if paiement.fichier_recu else chemin_relatif
-            }, status=status.HTTP_200_OK)
+            return Response(
+                {
+                    "message": "Paiement validé, reçu généré avec succès",
+                    "recu": paiement.fichier_recu.url
+                    if paiement.fichier_recu
+                    else None,
+                },
+                status=status.HTTP_200_OK,
+            )
 
         except Exception as e:
             print("Erreur génération reçu ou envoi mail :", e)
-            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 class MessageViewSet(viewsets.ModelViewSet):
