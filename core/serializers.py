@@ -64,10 +64,16 @@ class PropertySerializer(serializers.ModelSerializer):
         return obj.contract_set.exists()
 
     def get_contrat_pdf_url(self, obj):
-        contract = obj.contract_set.first()  # Prend le premier contrat trouvé
+        contract = obj.contract_set.first()
         if contract and contract.fichier_pdf:
-            return self.context['request'].build_absolute_uri(contract.fichier_pdf.url)
+            return contract.fichier_pdf.url  # ✅ URL Cloudinary
         return None
+
+    # def get_contrat_pdf_url(self, obj):
+    #     contract = obj.contract_set.first()  Prend le premier contrat trouvé
+    #     if contract and contract.fichier_pdf:
+    #         return self.context['request'].build_absolute_uri(contract.fichier_pdf.url)
+    #     return None
 
 
 class ContractSerializer(serializers.ModelSerializer):
@@ -119,10 +125,15 @@ class PaymentSerializer(serializers.ModelSerializer):
             'date_paiement', 'fichier_recu_url', 'fichier_recu'
         ]
 
+    # def get_fichier_recu_url(self, obj):
+    #     request = self.context.get('request')
+    #     if obj.fichier_recu and request:
+    #         return request.build_absolute_uri(obj.fichier_recu.url)
+    #     return None
+
     def get_fichier_recu_url(self, obj):
-        request = self.context.get('request')
-        if obj.fichier_recu and request:
-            return request.build_absolute_uri(obj.fichier_recu.url)
+        if obj.fichier_recu:
+            return obj.fichier_recu.url  # ✅ URL Cloudinary direct
         return None
 
     def get_locataire_nom(self, obj):

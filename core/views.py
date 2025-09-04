@@ -104,6 +104,17 @@ class PropertyViewSet(viewsets.ModelViewSet):
         return Property.objects.filter(contract__locataire=user).distinct()
 
 
+# class ContractViewSet(viewsets.ModelViewSet):
+#     queryset = Contract.objects.all()
+#     serializer_class = ContractSerializer
+#     permission_classes = [IsAuthenticated]
+#
+#     def get_queryset(self):
+#         user = self.request.user
+#         if user.role == 'admin':
+#             return Contract.objects.filter(logement__proprietaire=user)
+#         return Contract.objects.filter(locataire=user)
+
 class ContractViewSet(viewsets.ModelViewSet):
     queryset = Contract.objects.all()
     serializer_class = ContractSerializer
@@ -115,6 +126,28 @@ class ContractViewSet(viewsets.ModelViewSet):
             return Contract.objects.filter(logement__proprietaire=user)
         return Contract.objects.filter(locataire=user)
 
+    def perform_create(self, serializer):
+        """
+        Surcharge pour s'assurer que le fichier PDF est bien stocké dans Cloudinary
+        au lieu d'un stockage local.
+        """
+        contract = serializer.save()
+        if contract.fichier_pdf:
+            # ✅ Cloudinary gère automatiquement le stockage
+            # donc on n'a pas besoin d'utiliser .path ni de manipuler un fichier local
+            contract.fichier_pdf.url  # forcer l'URL Cloudinary
+        return contract
+
+    def perform_update(self, serializer):
+        """
+        Même logique lors d'une mise à jour : toujours s'assurer que l'URL Cloudinary est utilisée.
+        """
+        contract = serializer.save()
+        if contract.fichier_pdf:
+            contract.fichier_pdf.url
+        return contract
+
+
 # class PaymentViewSet(viewsets.ModelViewSet):
 #     queryset = Payment.objects.all()
 #     serializer_class = PaymentSerializer
@@ -122,7 +155,7 @@ class ContractViewSet(viewsets.ModelViewSet):
 #
 #     def get_queryset(self):
 #         user = self.request.user
-#         if user.role == 'admin':
+#         if user.role == "admin":
 #             return Payment.objects.filter(logement__proprietaire=user)
 #         return Payment.objects.filter(locataire=user)
 #
@@ -130,48 +163,54 @@ class ContractViewSet(viewsets.ModelViewSet):
 #         # Injecte automatiquement le locataire connecté lors de la création
 #         serializer.save(locataire=self.request.user)
 #
-#     # @action(detail=False, methods=['get'])
-#     # def mes_paiements(self, request):
-#     #     paiements = Payment.objects.filter(locataire=request.user)
-#     #     serializer = self.get_serializer(paiements, many=True, context={'request': request})
-#     #     return Response(serializer.data)
-#
-#     @action(detail=False, methods=['get'])
+#     @action(detail=False, methods=["get"])
 #     def mes_paiements(self, request):
 #         user = request.user
-#         paiements = Payment.objects.filter(locataire=user).order_by('-date_paiement')
-#         serializer = self.get_serializer(paiements, many=True, context={'request': request})
+#         paiements = Payment.objects.filter(locataire=user).order_by("-date_paiement")
+#         serializer = self.get_serializer(
+#             paiements, many=True, context={"request": request}
+#         )
 #         return Response(serializer.data)
 #
-#     @action(detail=True, methods=['post'])
+#     @action(detail=True, methods=["post"])
 #     def valider(self, request, pk=None):
 #         paiement = self.get_object()
 #
 #         if paiement.est_valide:
-#             return Response({'message': 'Paiement déjà validé'}, status=status.HTTP_400_BAD_REQUEST)
+#             return Response(
+#                 {"message": "Paiement déjà validé"},
+#                 status=status.HTTP_400_BAD_REQUEST,
+#             )
 #
 #         try:
 #             paiement.est_valide = True
 #
-#             chemin_relatif = generer_recu_paiement(paiement, request.user.get_full_name())
-#             paiement.fichier_recu = chemin_relatif
+#             # Génère le reçu PDF en mémoire (retourne bytes)
+#             pdf_bytes = generer_recu_paiement(paiement, request.user.get_full_name())
+#
+#             # Sauvegarde direct sur Cloudinary via FileField
+#             paiement.fichier_recu.save(
+#                 f"recu_paiement_{paiement.id}.pdf", ContentFile(pdf_bytes)
+#             )
 #             paiement.save()
 #
-#             # Chemin absolu du PDF pour l’envoi mail
-#             chemin_absolu = os.path.join(settings.MEDIA_ROOT, chemin_relatif)
+#             # Envoi mail avec le fichier stocké
+#             if paiement.fichier_recu:
+#                 envoyer_recu_par_mail(paiement, paiement.fichier_recu.url)
 #
-#             # Envoi mail
-#             envoyer_recu_par_mail(paiement, chemin_absolu)
-#
-#             return Response({
-#                 'message': 'Paiement validé, reçu généré avec succes',
-#                 'recu': paiement.fichier_recu.url if paiement.fichier_recu else chemin_relatif
-#             }, status=status.HTTP_200_OK)
+#             return Response(
+#                 {
+#                     "message": "Paiement validé, reçu généré avec succès",
+#                     "recu": paiement.fichier_recu.url
+#                     if paiement.fichier_recu
+#                     else None,
+#                 },
+#                 status=status.HTTP_200_OK,
+#             )
 #
 #         except Exception as e:
 #             print("Erreur génération reçu ou envoi mail :", e)
-#             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
+#             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 class PaymentViewSet(viewsets.ModelViewSet):
     queryset = Payment.objects.all()
@@ -210,25 +249,24 @@ class PaymentViewSet(viewsets.ModelViewSet):
         try:
             paiement.est_valide = True
 
-            # Génère le reçu PDF en mémoire (retourne bytes)
+            # Génère le reçu PDF en mémoire (bytes)
             pdf_bytes = generer_recu_paiement(paiement, request.user.get_full_name())
 
-            # Sauvegarde direct sur Cloudinary via FileField
+            # ✅ Sauvegarde directement dans Cloudinary via FileField
             paiement.fichier_recu.save(
-                f"recu_paiement_{paiement.id}.pdf", ContentFile(pdf_bytes)
+                f"recu_paiement_{paiement.id}.pdf",
+                ContentFile(pdf_bytes),
+                save=True
             )
-            paiement.save()
 
-            # Envoi mail avec le fichier stocké
+            # Envoi mail avec le lien Cloudinary
             if paiement.fichier_recu:
-                envoyer_recu_par_mail(paiement, paiement.fichier_recu.path)
+                envoyer_recu_par_mail(paiement, paiement.fichier_recu.url)
 
             return Response(
                 {
                     "message": "Paiement validé, reçu généré avec succès",
-                    "recu": paiement.fichier_recu.url
-                    if paiement.fichier_recu
-                    else None,
+                    "recu": paiement.fichier_recu.url if paiement.fichier_recu else None,
                 },
                 status=status.HTTP_200_OK,
             )
@@ -237,6 +275,40 @@ class PaymentViewSet(viewsets.ModelViewSet):
             print("Erreur génération reçu ou envoi mail :", e)
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+
+# class MessageViewSet(viewsets.ModelViewSet):
+#     queryset = Message.objects.all()
+#     serializer_class = MessageSerializer
+#     permission_classes = [permissions.IsAuthenticated]
+#
+#     def get_queryset(self):
+#         user = self.request.user
+#         return Message.objects.filter(Q(expediteur=user) | Q(destinataire=user))
+#
+#     def perform_create(self, serializer):
+#         serializer.save(expediteur=self.request.user)
+#
+#     def destroy(self, request, *args, **kwargs):
+#         instance = self.get_object()
+#         if instance.expediteur != request.user:
+#             return Response({'detail': "Vous ne pouvez supprimer que vos propres messages."}, status=403)
+#         return super().destroy(request, *args, **kwargs)
+#
+#     @action(detail=False, methods=['get'], url_path='conversation/(?P<user_id>[^/.]+)')
+#     def conversation(self, request, user_id=None):
+#         user = request.user
+#         try:
+#             destinataire = CustomUser.objects.get(id=user_id)
+#         except CustomUser.DoesNotExist:
+#             return Response({'detail': 'Utilisateur introuvable'}, status=404)
+#
+#         messages = Message.objects.filter(
+#             Q(expediteur=user, destinataire=destinataire) |
+#             Q(expediteur=destinataire, destinataire=user)
+#         ).order_by('date_envoi')
+#
+#         serializer = self.get_serializer(messages, many=True)
+#         return Response(serializer.data)
 
 class MessageViewSet(viewsets.ModelViewSet):
     queryset = Message.objects.all()
@@ -253,7 +325,10 @@ class MessageViewSet(viewsets.ModelViewSet):
     def destroy(self, request, *args, **kwargs):
         instance = self.get_object()
         if instance.expediteur != request.user:
-            return Response({'detail': "Vous ne pouvez supprimer que vos propres messages."}, status=403)
+            return Response(
+                {'detail': "Vous ne pouvez supprimer que vos propres messages."},
+                status=status.HTTP_403_FORBIDDEN
+            )
         return super().destroy(request, *args, **kwargs)
 
     @action(detail=False, methods=['get'], url_path='conversation/(?P<user_id>[^/.]+)')
