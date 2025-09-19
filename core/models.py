@@ -87,52 +87,20 @@ MODE_PAIEMENT = [
     ('Virement', 'Virement'),
 ]
 
-class Payment(models.Model):
-    STATUT_CHOICES = [
-        ('en_attente', 'En attente'),
-        ('valide', 'Validé'),
-        ('annule', 'Annulé'),
-    ]
 
-    locataire = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        on_delete=models.CASCADE,
-        limit_choices_to={'role': 'locataire'}
-    )
+class Payment(models.Model):
+    locataire = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, limit_choices_to={'role': 'locataire'})
     logement = models.ForeignKey(Property, on_delete=models.CASCADE)
     montant = models.DecimalField(max_digits=10, decimal_places=2)
     type_paiement = models.CharField(max_length=20, choices=PAYMENT_TYPES)
     mode_paiement = models.CharField(max_length=20, choices=MODE_PAIEMENT, default='Mobile Money')
     mois_concerne = models.CharField(max_length=20, help_text="Ex: Juin 2025")
-
-    # 🔥 Nouveau champ
-    statut = models.CharField(max_length=20, choices=STATUT_CHOICES, default='en_attente')
-
-    est_valide = models.BooleanField(default=False)  # ⚡ reste pour compatibilité
+    est_valide = models.BooleanField(default=False)
     date_paiement = models.DateTimeField(default=timezone.now)
     fichier_recu = models.FileField(upload_to='recus/', blank=True, null=True)
 
-    def save(self, *args, **kwargs):
-        # Sync auto est_valide <-> statut
-        self.est_valide = (self.statut == "valide")
-        super().save(*args, **kwargs)
-
     def __str__(self):
-        return f"{self.locataire.username} - {self.type_paiement} - {self.mois_concerne} ({self.statut})"
-
-# class Payment(models.Model):
-#     locataire = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, limit_choices_to={'role': 'locataire'})
-#     logement = models.ForeignKey(Property, on_delete=models.CASCADE)
-#     montant = models.DecimalField(max_digits=10, decimal_places=2)
-#     type_paiement = models.CharField(max_length=20, choices=PAYMENT_TYPES)
-#     mode_paiement = models.CharField(max_length=20, choices=MODE_PAIEMENT, default='Mobile Money')
-#     mois_concerne = models.CharField(max_length=20, help_text="Ex: Juin 2025")
-#     est_valide = models.BooleanField(default=False)
-#     date_paiement = models.DateTimeField(default=timezone.now)
-#     fichier_recu = models.FileField(upload_to='recus/', blank=True, null=True)
-#
-#     def __str__(self):
-#         return f"{self.locataire.username} - {self.type_paiement} - {self.mois_concerne}"
+        return f"{self.locataire.username} - {self.type_paiement} - {self.mois_concerne}"
 
 class Message(models.Model):
     expediteur = models.ForeignKey(settings.AUTH_USER_MODEL, related_name='messages_envoyes', on_delete=models.CASCADE)
