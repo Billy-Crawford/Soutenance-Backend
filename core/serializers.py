@@ -109,6 +109,8 @@ class ContractSerializer(serializers.ModelSerializer):
         return f"{obj.locataire.first_name} {obj.locataire.last_name}".strip() or obj.locataire.username
 
 
+# core/serializers.py
+
 class PaymentSerializer(serializers.ModelSerializer):
     fichier_recu_url = serializers.SerializerMethodField()
     locataire_nom = serializers.SerializerMethodField()
@@ -121,19 +123,13 @@ class PaymentSerializer(serializers.ModelSerializer):
             'id', 'logement',
             'locataire_nom', 'proprietaire_nom', 'logement_nom',
             'montant', 'type_paiement', 'mode_paiement',
-            'mois_concerne', 'est_valide',
+            'mois_concerne', 'statut', 'est_valide',
             'date_paiement', 'fichier_recu_url', 'fichier_recu'
         ]
 
-    # def get_fichier_recu_url(self, obj):
-    #     request = self.context.get('request')
-    #     if obj.fichier_recu and request:
-    #         return request.build_absolute_uri(obj.fichier_recu.url)
-    #     return None
-
     def get_fichier_recu_url(self, obj):
         if obj.fichier_recu:
-            return obj.fichier_recu.url  # ✅ URL Cloudinary direct
+            return obj.fichier_recu.url
         return None
 
     def get_locataire_nom(self, obj):
@@ -143,13 +139,50 @@ class PaymentSerializer(serializers.ModelSerializer):
         return obj.logement.proprietaire.get_full_name() or obj.logement.proprietaire.username
 
     def create(self, validated_data):
-        request = self.context.get('request')
-        user = request.user
-        validated_data['locataire'] = user
+        validated_data['locataire'] = self.context['request'].user
         return super().create(validated_data)
 
-    # def create(self, validated_data):
-    #     return Payment.objects.create(**validated_data)
+# class PaymentSerializer(serializers.ModelSerializer):
+#     fichier_recu_url = serializers.SerializerMethodField()
+#     locataire_nom = serializers.SerializerMethodField()
+#     proprietaire_nom = serializers.SerializerMethodField()
+#     logement_nom = serializers.CharField(source="logement.nom", read_only=True)
+#
+#     class Meta:
+#         model = Payment
+#         fields = [
+#             'id', 'logement',
+#             'locataire_nom', 'proprietaire_nom', 'logement_nom',
+#             'montant', 'type_paiement', 'mode_paiement',
+#             'mois_concerne', 'est_valide',
+#             'date_paiement', 'fichier_recu_url', 'fichier_recu'
+#         ]
+#
+#     # def get_fichier_recu_url(self, obj):
+#     #     request = self.context.get('request')
+#     #     if obj.fichier_recu and request:
+#     #         return request.build_absolute_uri(obj.fichier_recu.url)
+#     #     return None
+#
+#     def get_fichier_recu_url(self, obj):
+#         if obj.fichier_recu:
+#             return obj.fichier_recu.url  # ✅ URL Cloudinary direct
+#         return None
+#
+#     def get_locataire_nom(self, obj):
+#         return f"{obj.locataire.first_name} {obj.locataire.last_name}".strip() or obj.locataire.username
+#
+#     def get_proprietaire_nom(self, obj):
+#         return obj.logement.proprietaire.get_full_name() or obj.logement.proprietaire.username
+#
+#     def create(self, validated_data):
+#         request = self.context.get('request')
+#         user = request.user
+#         validated_data['locataire'] = user
+#         return super().create(validated_data)
+#
+#     # def create(self, validated_data):
+#     #     return Payment.objects.create(**validated_data)
 
 # ======================== MESSAGE =============================
 
