@@ -212,15 +212,6 @@ class ContractViewSet(viewsets.ModelViewSet):
 
 
 
-from rest_framework import viewsets, status
-from rest_framework.decorators import action
-from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated
-from django.core.files.base import ContentFile
-from .models import Payment
-from .serializers import PaymentSerializer
-from utils.pdf_generator import generer_recu_paiement
-from utils.mail_utils import envoyer_recu_par_mail  # si tu as cette fonction
 
 class PaymentViewSet(viewsets.ModelViewSet):
     queryset = Payment.objects.all()
