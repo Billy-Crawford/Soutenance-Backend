@@ -212,13 +212,23 @@ class ContractViewSet(viewsets.ModelViewSet):
 
 
 
+from rest_framework import viewsets, status
+from rest_framework.decorators import action
+from rest_framework.response import Response
+from rest_framework.permissions import IsAuthenticated
+from django.core.files.base import ContentFile
+from .models import Payment
+from .serializers import PaymentSerializer
+from utils.pdf_generator import generer_recu_paiement
+from utils.mail_utils import envoyer_recu_par_mail  # si tu as cette fonction
+
 class PaymentViewSet(viewsets.ModelViewSet):
     queryset = Payment.objects.all()
     serializer_class = PaymentSerializer
     permission_classes = [IsAuthenticated]
 
     def get_serializer_context(self):
-        # ✅ Très important pour que les SerializerMethodField voient la requête
+        # ✅ Important pour permettre au serializer d'accéder à la requête
         context = super().get_serializer_context()
         context.update({"request": self.request})
         return context
@@ -244,31 +254,46 @@ class PaymentViewSet(viewsets.ModelViewSet):
         paiement = self.get_object()
 
         if paiement.est_valide:
-            return Response({"message": "Paiement déjà validé"}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"message": "Paiement déjà validé"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
         try:
             paiement.est_valide = True
-            pdf_bytes = generer_recu_paiement(paiement, request.user.get_full_name())
 
-            paiement.fichier_recu.save(
-                f"recu_paiement_{paiement.id}.pdf",
-                ContentFile(pdf_bytes),
-                save=True
+            # ✅ Génération correcte du fichier PDF
+            recu_pdf = generer_recu_paiement(
+                paiement,
+                request.user.get_full_name() or request.user.username
             )
 
+            # ✅ Sauvegarde correcte sur Cloudinary ou MEDIA_ROOT
+            paiement.fichier_recu.save(recu_pdf.name, recu_pdf, save=True)
+            paiement.save()
+
+            # ✅ Envoi du reçu par mail (optionnel)
             if paiement.fichier_recu:
-                envoyer_recu_par_mail(paiement, paiement.fichier_recu.url)
+                try:
+                    envoyer_recu_par_mail(paiement, paiement.fichier_recu.url)
+                except Exception as mail_err:
+                    print("Erreur d’envoi du mail :", mail_err)
 
             return Response(
                 {
-                    "message": "Paiement validé, reçu généré avec succès",
+                    "message": "Paiement validé et reçu généré avec succès",
                     "recu": paiement.fichier_recu.url if paiement.fichier_recu else None,
                 },
                 status=status.HTTP_200_OK,
             )
 
         except Exception as e:
-            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            print("Erreur lors de la validation du paiement :", str(e))
+            return Response(
+                {"error": str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
 
 
 

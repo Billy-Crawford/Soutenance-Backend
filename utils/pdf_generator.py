@@ -1,20 +1,18 @@
+# utils/pdf_generator.py
+
+from io import BytesIO
+from django.core.files.base import ContentFile
 from reportlab.lib.pagesizes import A4
 from reportlab.pdfgen import canvas
-import os
-from django.conf import settings
 from datetime import datetime
 
 def generer_recu_paiement(paiement, admin_nom):
-    # Nom fichier
-    filename = f"recu_paiement_{paiement.id}.pdf"
-
-    # Chemin absolu complet
-    dir_recus = os.path.join(settings.MEDIA_ROOT, "recus")
-    os.makedirs(dir_recus, exist_ok=True)
-    path_absolu = os.path.join(dir_recus, filename)
-
-    # Création PDF
-    c = canvas.Canvas(path_absolu, pagesize=A4)
+    """
+    Génère un reçu PDF et le retourne sous forme de ContentFile prêt à être sauvegardé.
+    Compatible Cloudinary ou tout autre FileField storage.
+    """
+    buffer = BytesIO()
+    c = canvas.Canvas(buffer, pagesize=A4)
     c.setFont("Helvetica-Bold", 16)
     c.drawString(200, 800, "REÇU DE PAIEMENT")
 
@@ -29,6 +27,7 @@ def generer_recu_paiement(paiement, admin_nom):
     c.drawString(100, 630, f"Date génération : {datetime.now().strftime('%d/%m/%Y')}")
 
     c.save()
+    buffer.seek(0)
 
-    # Retourner chemin relatif compatible FileField (ex: 'recus/recu_paiement_1.pdf')
-    return f"recus/{filename}"
+    # ✅ Retourne un vrai fichier utilisable par FileField (Cloudinary friendly)
+    return ContentFile(buffer.getvalue(), name=f"recu_paiement_{paiement.id}.pdf")
