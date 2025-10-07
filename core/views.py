@@ -273,11 +273,11 @@ class PaymentViewSet(viewsets.ModelViewSet):
             paiement.save()
 
             # ✅ Envoi du reçu par mail (optionnel)
-            if paiement.fichier_recu:
-                try:
-                    envoyer_recu_par_mail(paiement, paiement.fichier_recu.url)
-                except Exception as mail_err:
-                    print("Erreur d’envoi du mail :", mail_err)
+            # if paiement.fichier_recu:
+            #     try:
+            #         envoyer_recu_par_mail(paiement, paiement.fichier_recu.url)
+            #     except Exception as mail_err:
+            #         print("Erreur d’envoi du mail :", mail_err)
 
             return Response(
                 {
