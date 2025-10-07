@@ -140,3 +140,12 @@ REST_FRAMEWORK = {
 # AUTRES
 # =====================
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+
+# =====================
+# STOCKAGE LOCAL POUR LES RECUS
+# =====================
+
+# Pour les reçus PDF, on utilise le stockage local (même si Cloudinary est actif)
+RECUS_DIR = MEDIA_ROOT / "recus"
+os.makedirs(RECUS_DIR, exist_ok=True)
+

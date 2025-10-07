@@ -132,8 +132,9 @@ class PaymentSerializer(serializers.ModelSerializer):
     #     return None
 
     def get_fichier_recu_url(self, obj):
-        if obj.fichier_recu:
-            return obj.fichier_recu.url  # ✅ URL Cloudinary direct
+        request = self.context.get('request')
+        if obj.fichier_recu and request:
+            return request.build_absolute_uri(obj.fichier_recu.url)
         return None
 
     def get_locataire_nom(self, obj):

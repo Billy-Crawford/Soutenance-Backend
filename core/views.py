@@ -253,27 +253,30 @@ class PaymentViewSet(viewsets.ModelViewSet):
         try:
             paiement.est_valide = True
 
-            # ✅ Génération correcte du fichier PDF
-            recu_pdf = generer_recu_paiement(
+            # ✅ Génère le reçu PDF en mémoire
+            pdf_bytes = generer_recu_paiement(
                 paiement,
                 request.user.get_full_name() or request.user.username
             )
 
-            # ✅ Sauvegarde correcte sur Cloudinary ou MEDIA_ROOT
-            paiement.fichier_recu.save(recu_pdf.name, recu_pdf, save=True)
+            # ✅ Sauvegarde dans le dossier local MEDIA_ROOT/recus/
+            from django.core.files.base import ContentFile
+            fichier_nom = f"recu_paiement_{paiement.id}.pdf"
+            paiement.fichier_recu.save(
+                fichier_nom,
+                ContentFile(pdf_bytes),
+                save=True
+            )
+
             paiement.save()
 
-            # ✅ Envoi du reçu par mail (optionnel)
-            # if paiement.fichier_recu:
-            #     try:
-            #         envoyer_recu_par_mail(paiement, paiement.fichier_recu.url)
-            #     except Exception as mail_err:
-            #         print("Erreur d’envoi du mail :", mail_err)
+            # ✅ URL locale (servie par MEDIA_URL)
+            recu_url = request.build_absolute_uri(paiement.fichier_recu.url)
 
             return Response(
                 {
                     "message": "Paiement validé et reçu généré avec succès",
-                    "recu": paiement.fichier_recu.url if paiement.fichier_recu else None,
+                    "recu": recu_url,
                 },
                 status=status.HTTP_200_OK,
             )
@@ -284,8 +287,6 @@ class PaymentViewSet(viewsets.ModelViewSet):
                 {"error": str(e)},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
-
-
 
 
 class MessageViewSet(viewsets.ModelViewSet):
